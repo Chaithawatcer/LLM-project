@@ -1,0 +1,12 @@
+# A whitelist: everything is excluded unless listed below, so .env, .git, .venv, tests and the
+# embedding cache can never end up in the image.
+**
+!pyproject.toml
+!uv.lock
+!app
+!web
+!data/docs
+!data/raw/known_exploited_vulnerabilities.csv
+!data/index/naive_800_150.npz
+!data/index/naive_800_150.json
+**/__pycache__

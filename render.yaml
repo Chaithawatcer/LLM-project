@@ -1,0 +1,19 @@
+# Render Blueprint: "New > Blueprint" in the Render dashboard, pick this repo.
+# The API key is never stored here: Render asks for it when the service is created (sync: false).
+services:
+  - type: web
+    name: cyber-advisor
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://llm.nat-d.uk/v1
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RATE_PER_MIN
+        value: "10"
+      - key: DAILY_LIMIT
+        value: "300"

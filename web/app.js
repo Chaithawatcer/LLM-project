@@ -102,7 +102,11 @@ $("ask").onclick = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, mode: $("mode").value }),
     });
-    if (!resp.ok || !resp.body) throw new Error(`request failed (${resp.status})`);
+    if (!resp.ok || !resp.body) {
+      let detail = "";  // FastAPI sends {"detail": "..."}; a validation error sends a list, so only show strings
+      try { const d = (await resp.json()).detail; if (typeof d === "string") detail = d; } catch { /* not JSON */ }
+      throw new Error(detail || `request failed (${resp.status})`);
+    }
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";

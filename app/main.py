@@ -13,9 +13,10 @@ import logging
 import os
 import threading
 from collections.abc import Iterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -24,12 +25,26 @@ from app.agent import run_agent
 from app.chunking import strategy_slug
 from app.config import INDEX_DIR, get_settings
 from app.index import VectorIndex
+from app.ratelimit import RateLimiter, client_ip, limiter_from_env
 from app.runtime import IndexMissing, Runtime, build_runtime
 from app.schemas import AskRequest
 
 log = logging.getLogger("cyber-advisor")
-app = FastAPI(title="Cyber Advisor")
 _lock = threading.Lock()
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Load the index at start-up so the first visitor does not pay for it (a cold start on free hosting
+    is slow enough already). A missing index is logged, not fatal: /api/health and the UI report it."""
+    try:
+        get_runtime(application)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("runtime not ready at start-up: %s", exc)
+    yield
+
+
+app = FastAPI(title="Cyber Advisor", lifespan=lifespan)
 
 
 def get_runtime(application: FastAPI) -> Runtime:
@@ -38,6 +53,12 @@ def get_runtime(application: FastAPI) -> Runtime:
         if getattr(application.state, "runtime", None) is None:
             application.state.runtime = build_runtime()
         return application.state.runtime
+
+
+def get_limiter(application: FastAPI) -> RateLimiter:
+    if getattr(application.state, "limiter", None) is None:
+        application.state.limiter = limiter_from_env()
+    return application.state.limiter
 
 
 def _sse(event: dict) -> str:
@@ -60,6 +81,10 @@ def health() -> dict:
 
 @app.post("/api/ask")
 def ask(body: AskRequest, request: Request) -> StreamingResponse:
+    refusal = get_limiter(request.app).check(client_ip(request))
+    if refusal:  # before any model call is made: a refused request costs nothing
+        raise HTTPException(status_code=429, detail=refusal, headers={"Retry-After": "60"})
+
     def frames() -> Iterator[str]:
         try:
             runtime = get_runtime(request.app)

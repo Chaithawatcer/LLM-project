@@ -27,6 +27,31 @@ uv run pytest -q                # 80 tests; need no key and no network
 
 Embeddings are cached on disk (`data/index/embed_cache.db`), so an interrupted `ingest` resumes. `scripts/fetch_data.py` re-downloads everything (`--force` refreshes the KEV snapshot - which changes weekly, so the committed snapshot is what the evaluation gold refers to).
 
+## Live demo
+
+**URL: _fill in after deploying (see below)_.** Free hosting puts the app to sleep after ~15 minutes without visitors, so the *first* load can take about a minute (Render shows a loading page); after that it answers normally. Fair-use limits apply: 10 questions per minute per visitor and 300 per day overall, because every question spends model calls on the owner's course key.
+
+Things worth trying, with what to expect:
+
+| Try | Expect |
+|---|---|
+| `How many Microsoft vulnerabilities were added to KEV in 2025?` | 39, with the SQL that produced it shown under the answer |
+| `What does NIST recommend for emergency patching?` | a cited answer (`[n]` and page) from SP 800-40 |
+| `What is the capital of France?` | a refusal: it only answers from its sources |
+| mode *documents only*, then `How many KEV entries belong to Microsoft?` | it cannot answer - passages cannot count (the baseline) |
+| **known weak spot:** `How many KEV entries are classified as CWE-78? Count CWE-78 only, not ids that merely start with 78.` | the model usually writes `LIKE '%CWE-78%'` and answers 220; the correct value is 112 |
+
+## Deploy (Render, free tier)
+
+The repo ships a `Dockerfile`, a whitelist `.dockerignore` (so `.env` can never enter the image), and `render.yaml`. The image contains the documents, the KEV snapshot and one precomputed index (13 MB, committed), so a deploy needs no embedding run. The API key is **not** in the repo or the image: it is a secret you give the host.
+
+1. Push this repo to GitHub, including `data/index/naive_800_150.*` (everything else in `data/index/` stays ignored).
+2. On [render.com](https://render.com): **New > Blueprint**, pick the repo. Render reads `render.yaml` and asks for `OPENAI_API_KEY`; paste your course key there. (No Blueprint? **New > Web Service**, runtime *Docker*, plan *Free*, health check `/api/health`, and add the environment variables from `render.yaml`.)
+3. Wait for the build (a few minutes), open the URL it gives you, and check `/api/health` shows `"llm_key_set": true, "index_ready": true`. Then ask the questions in the table above.
+4. Put the URL in this README and in your submission.
+
+Other settings: `TRUST_PROXY=1` (already set) makes the rate limiter see each visitor's address instead of the host's proxy; `RATE_PER_MIN` / `DAILY_LIMIT` change the limits (`0` switches one off). Anyone with the link can spend your key's quota up to those limits, so lower `DAILY_LIMIT` if in doubt, and revoke or rotate the key after grading.
+
 ## What each part is for (course lecture in brackets)
 
 | File | Role |

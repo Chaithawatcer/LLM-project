@@ -2,7 +2,10 @@
 __pycache__/
 .pytest_cache/
 .env
-# derived, rebuilt by `python -m app.ingest`
-data/index/
+# derived, rebuilt by `python -m app.ingest` ...
+data/index/*
+# ... except the one index the deployed image ships (13 MB), so a deploy needs no 20-minute embedding run
+!data/index/naive_800_150.npz
+!data/index/naive_800_150.json
 # the PDFs are re-downloadable; the .txt extracts in data/docs ARE committed
 data/raw/pdf/
