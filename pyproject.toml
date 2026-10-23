@@ -1,0 +1,26 @@
+[project]
+name = "cyber-advisor"
+version = "0.1.0"
+description = "Agentic RAG + guarded text-to-SQL advisor over the CISA KEV catalog and public-domain security guidance"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.40",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "numpy>=1.26",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "trafilatura>=1.12",
+    "pypdf>=4.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber Advisor</title>
+  <style>
+    :root { --bg:#fff; --fg:#1b2330; --muted:#5b6678; --card:#f4f6fa; --line:#d9dfe9; --accent:#2f5bea;
+            --ok:#1a7f4b; --warn:#a15c00; --bad:#b3261e; --act:#2f5bea; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0f1319; --fg:#e6e9ef; --muted:#97a2b3; --card:#171d27; --line:#2a3342; --accent:#7c9bff;
+              --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --act:#7c9bff; } }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 1.45rem; margin: 0 0 4px; }
+    .sub, .muted { color: var(--muted); }
+    .sub { margin: 0 0 18px; }
+    label { display:block; font-size:.85rem; color:var(--muted); margin: 14px 0 4px; }
+    textarea, select { width:100%; background:var(--card); color:var(--fg); border:1px solid var(--line);
+                       border-radius:8px; padding:10px 12px; font:inherit; }
+    textarea { min-height: 84px; resize: vertical; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+    .row > div { flex:1 1 220px; }
+    button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 18px; font:inherit; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:default; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .chip { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:.82rem; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:18px; overflow:hidden; }
+    .panel h2 { font-size:.8rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin:0; padding:10px 14px; border-bottom:1px solid var(--line); }
+    .step { padding:8px 14px; border-bottom:1px solid var(--line); font-size:.85rem; word-break:break-word; }
+    .step:last-child { border-bottom:0; }
+    .step b.act { color:var(--act); } .step b.obs { color:var(--ok); }
+    code, pre { font-family: ui-monospace, Consolas, monospace; font-size:.82rem; }
+    pre { margin:6px 0 0; white-space:pre-wrap; word-break:break-word; color:var(--muted); }
+    .answer { padding:14px; white-space:pre-wrap; }
+    .meta { padding:0 14px 14px; font-size:.85rem; }
+    .meta ul { margin:4px 0 10px; padding-left:20px; }
+    .tag { display:inline-block; border:1px solid currentColor; border-radius:6px; padding:0 8px; font-size:.78rem; margin-right:6px; }
+    .tag.ok { color:var(--ok); } .tag.warn { color:var(--warn); } .tag.bad { color:var(--bad); }
+    .err { color:var(--bad); margin-top:14px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Cyber Advisor</h1>
+  <p class="sub">Ask about the CISA Known Exploited Vulnerabilities catalog (counts, vendors, dates, ransomware use)
+    or about NIST security guidance (incident response, patching, risk, logging, zero trust). Answers cite their sources.</p>
+  <p class="muted" id="health">checking server…</p>
+
+  <label for="q">Question</label>
+  <textarea id="q" maxlength="1000" placeholder="e.g. How many Microsoft vulnerabilities were added to KEV in 2025?"></textarea>
+  <div class="chips" id="examples"></div>
+
+  <div class="row">
+    <div>
+      <label for="mode">Mode (the baselines from the evaluation)</label>
+      <select id="mode">
+        <option value="agent">agent: documents + KEV table</option>
+        <option value="rag_only">documents only (no SQL)</option>
+        <option value="no_tools">no tools (bare model)</option>
+      </select>
+    </div>
+    <div style="flex:0 0 auto"><button id="ask">Ask</button></div>
+  </div>
+
+  <p class="err" id="error" hidden></p>
+  <section class="panel" id="trace-panel" hidden><h2>What the agent did</h2><div id="trace"></div></section>
+  <section class="panel" id="answer-panel" hidden><h2>Answer</h2><div class="answer" id="answer"></div><div class="meta" id="meta"></div></section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+[
+  {
+    "slug": "sp800-61r3",
+    "id": "NIST SP 800-61 Rev. 3",
+    "title": "Incident Response Recommendations and Considerations for Cybersecurity Risk Management",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r3.pdf",
+    "pages": 48,
+    "chars": 97803
+  },
+  {
+    "slug": "sp800-40r4",
+    "id": "NIST SP 800-40 Rev. 4",
+    "title": "Guide to Enterprise Patch Management Planning",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-40r4.pdf",
+    "pages": 28,
+    "chars": 69466
+  },
+  {
+    "slug": "csf-2.0",
+    "id": "NIST CSWP 29",
+    "title": "The NIST Cybersecurity Framework (CSF) 2.0",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf",
+    "pages": 32,
+    "chars": 66134
+  },
+  {
+    "slug": "sp800-218",
+    "id": "NIST SP 800-218",
+    "title": "Secure Software Development Framework (SSDF) Version 1.1",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf",
+    "pages": 36,
+    "chars": 101805
+  },
+  {
+    "slug": "sp800-83r1",
+    "id": "NIST SP 800-83 Rev. 1",
+    "title": "Guide to Malware Incident Prevention and Handling for Desktops and Laptops",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-83r1.pdf",
+    "pages": 47,
+    "chars": 147398
+  },
+  {
+    "slug": "sp800-115",
+    "id": "NIST SP 800-115",
+    "title": "Technical Guide to Information Security Testing and Assessment",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-115.pdf",
+    "pages": 80,
+    "chars": 244507
+  },
+  {
+    "slug": "sp800-30r1",
+    "id": "NIST SP 800-30 Rev. 1",
+    "title": "Guide for Conducting Risk Assessments",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-30r1.pdf",
+    "pages": 95,
+    "chars": 300826
+  },
+  {
+    "slug": "sp800-92",
+    "id": "NIST SP 800-92",
+    "title": "Guide to Computer Security Log Management",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-92.pdf",
+    "pages": 72,
+    "chars": 186126
+  },
+  {
+    "slug": "sp800-207",
+    "id": "NIST SP 800-207",
+    "title": "Zero Trust Architecture",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-207.pdf",
+    "pages": 59,
+    "chars": 146869
+  },
+  {
+    "slug": "sp800-150",
+    "id": "NIST SP 800-150",
+    "title": "Guide to Cyber Threat Information Sharing",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-150.pdf",
+    "pages": 43,
+    "chars": 120668
+  },
+  {
+    "slug": "sp800-190",
+    "id": "NIST SP 800-190",
+    "title": "Application Container Security Guide",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-190.pdf",
+    "pages": 63,
+    "chars": 150863
+  },
+  {
+    "slug": "sp800-128",
+    "id": "NIST SP 800-128",
+    "title": "Guide for Security-Focused Configuration Management of Information Systems",
+    "source_url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-128.pdf",
+    "pages": 99,
+    "chars": 250828
+  }
+]
