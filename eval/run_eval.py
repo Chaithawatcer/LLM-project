@@ -32,6 +32,7 @@ from app.kevdb import connect_kev
 from app.retrieval import Retriever
 from app.runtime import build_runtime
 from app.sqlguard import GuardedSQL
+from eval.judge import judge_fact
 from eval.metrics import (answer_has_all, balanced_accuracy, has_evidence, mean, norm, retrieval_scores,
                           rows_match)
 
@@ -134,7 +135,9 @@ def _query_vectors(items: list[dict]) -> dict[str, list[float]]:
 def cmd_retrieval(args: argparse.Namespace) -> int:
     items = [i for i in load_dataset(args.ids) if i.get("evidence")]
     docs = load_docs(DOCS_DIR)
-    modes, chunkings, k = split_csv(args.modes), split_csv(args.chunking), args.k
+    modes, chunkings = split_csv(args.modes), split_csv(args.chunking)
+    ks = sorted(int(k) for k in split_csv(args.ks))
+    k0, kmax = ks[0], ks[-1]          # the first k is the headline (MRR / DocRecall are reported at it)
     qvecs: dict[str, list[float]] | None = None
     rows, details = [], {}
 
@@ -151,27 +154,30 @@ def cmd_retrieval(args: argparse.Namespace) -> int:
             retriever = Retriever(chunks, index, llm.embed)
             per_item = []
             for it in items:
-                hits = retriever.search(it["question"], mode=mode, k=k, min_score=0.0,
+                hits = retriever.search(it["question"], mode=mode, k=kmax, min_score=0.0,
                                         qvec=qvecs[it["id"]] if qvecs else None)
-                s = retrieval_scores([(h.chunk.doc, h.chunk.text) for h in hits], it["evidence"], it.get("docs", []), k)
-                per_item.append({"id": it["id"], **s})
-            row = {"chunking": chunking, "mode": mode, "n_chunks": len(chunks),
-                   "hit": mean([p["hit"] for p in per_item]), "mrr": mean([p["mrr"] for p in per_item]),
-                   "doc_recall": mean([p["doc_recall"] for p in per_item])}
+                ranked = [(h.chunk.doc, h.chunk.text) for h in hits]
+                by_k = {k: retrieval_scores(ranked, it["evidence"], it.get("docs", []), k) for k in ks}
+                per_item.append({"id": it["id"], **{f"hit@{k}": by_k[k]["hit"] for k in ks},
+                                 "mrr": by_k[k0]["mrr"], "doc_recall": by_k[k0]["doc_recall"]})
+            row = {"chunking": chunking, "mode": mode, "n_chunks": len(chunks), "mrr": mean([p["mrr"] for p in per_item]),
+                   "doc_recall": mean([p["doc_recall"] for p in per_item]),
+                   **{f"hit@{k}": mean([p[f"hit@{k}"] for p in per_item]) for k in ks}}
             rows.append(row)
             details[f"{chunking}|{mode}"] = per_item
 
     if not rows:
         print("nothing to report.")
         return 1
-    print(f"\nRetrieval over {len(items)} questions with evidence (doc + mixed), k={k}, floor off\n")
-    print(md_table(["chunking", "mode", "chunks", f"Hit@{k}", "MRR", f"DocRecall@{k}"],
-                   [[r["chunking"], r["mode"], r["n_chunks"], f"{r['hit']:.2f}", f"{r['mrr']:.3f}", f"{r['doc_recall']:.2f}"] for r in rows]))
-    best = max(rows, key=lambda r: (r["mrr"], r["hit"]))
-    misses = [p["id"] for p in details[f"{best['chunking']}|{best['mode']}"] if p["hit"] == 0]
-    print(f"\nbest by MRR: CHUNKING={best['chunking']}  RETRIEVAL={best['mode']}"
-          + (f"   (still missing: {', '.join(misses)})" if misses else ""))
-    print("path:", save(f"retrieval_k{k}", {"k": k, "rows": rows, "per_item": details, "best": best}))
+    print(f"\nRetrieval over {len(items)} questions with evidence (doc + mixed), floor off; MRR and DocRecall at k={k0}\n")
+    print(md_table(["chunking", "mode", "chunks", *[f"Hit@{k}" for k in ks], f"MRR@{k0}", f"DocRecall@{k0}"],
+                   [[r["chunking"], r["mode"], r["n_chunks"], *[f"{r[f'hit@{k}']:.2f}" for k in ks],
+                     f"{r['mrr']:.3f}", f"{r['doc_recall']:.2f}"] for r in rows]))
+    best = max(rows, key=lambda r: (r["mrr"], r[f"hit@{ks[1] if len(ks) > 1 else k0}"]))
+    misses = [p["id"] for p in details[f"{best['chunking']}|{best['mode']}"] if p[f"hit@{kmax}"] == 0]
+    print(f"\nbest by MRR@{k0}: CHUNKING={best['chunking']}  RETRIEVAL={best['mode']}"
+          + (f"   (never found within top-{kmax}: {', '.join(misses)})" if misses else ""))
+    print("path:", save("retrieval", {"ks": ks, "rows": rows, "per_item": details, "best": best}))
     return 0
 
 
@@ -213,12 +219,22 @@ def cmd_floor(args: argparse.Namespace) -> int:
 
 # ---- agent: end to end -----------------------------------------------------------------------
 
-def score_item(item: dict, final: dict | None, ctx, gold_rows: list[tuple] | None) -> dict:
+def score_item(item: dict, final: dict | None, ctx, gold_rows: list[tuple] | None, judge=None) -> dict:
+    """The verdict for one question, judged on what the USER sees (the answer), so every mode - including
+    the bare model - is graded the same way. Whether the answer was also *backed by* retrieved evidence or
+    an executed query is reported separately as `verified`.
+
+      doc    correct = answered and the judge finds the evidence sentence's fact in the answer
+      sql    correct = answered and the answer contains the gold value(s)
+      mixed  correct = both of the above
+      oos    correct = the model declined
+    """
     out: dict = {"id": item["id"], "type": item["type"], "question": item["question"]}
     if final is None:
         return {**out, "error": "no final event", "correct": False}
     answer = final["answer"]
     used = set(final["tools_used"])
+    answered = not final["refused"]
     out.update(answer=answer, tools_used=sorted(used), refused=final["refused"], steps=final["steps"],
                stopped=final["stopped"], grounded=final["grounded"], invalid_citations=final["invalid_citations"],
                sql=[s["sql"] for s in final["sql"]])
@@ -231,16 +247,20 @@ def score_item(item: dict, final: dict | None, ctx, gold_rows: list[tuple] | Non
         cited_ns = {c["n"] for c in final["citations"]}
         out["retrieved"] = any(has_evidence(s["text"], item["evidence"]) for s in ctx.sources.values())
         out["cited"] = any(has_evidence(s["text"], item["evidence"]) for s in ctx.sources.values() if s["n"] in cited_ns)
+        fact = item.get("judge_fact") or item["evidence"][0]  # a fuller reference where the evidence phrase is thin
+        out["judge_reference"] = fact
+        out["fact_ok"] = bool(answered and judge and judge(item["question"], answer, fact))
     if gold_rows is not None:
         out["exec_match"] = any(e["ok"] and rows_match(e["rows"], gold_rows, bool(item.get("ordered"))) for e in ctx.sql_log)
         out["answer_ok"] = answer_has_all(answer, item["answer_contains"])
-    answered = not final["refused"]
     if kind == "doc":
-        out["correct"] = answered and out["retrieved"]
+        out["correct"], backed = answered and out["fact_ok"], out["retrieved"]
     elif kind == "sql":
-        out["correct"] = answered and out["exec_match"] and out["answer_ok"]
-    else:  # mixed: both halves
-        out["correct"] = answered and out["retrieved"] and out["exec_match"] and out["answer_ok"]
+        out["correct"], backed = answered and out["answer_ok"], out["exec_match"]
+    else:
+        out["correct"] = answered and out["answer_ok"] and out["fact_ok"]
+        backed = out["retrieved"] and out["exec_match"]
+    out["verified"] = bool(out["correct"] and backed)  # right AND demonstrably from the sources
     return out
 
 
@@ -250,18 +270,18 @@ def _summarise(records: list[dict]) -> list[list]:
         rs = [r for r in records if r["type"] == kind]
         if not rs:
             continue
-        n = len(rs)
-        def c(key):  # count of records with a truthy key, among those that have it
+        def c(key):  # share of records with a truthy key, among those that have it
             have = [r for r in rs if key in r]
             return pct(sum(bool(r[key]) for r in have), len(have)) if have else "-"
-        rows.append([kind, n, c("correct"), c("exec_match"), c("answer_ok"), c("retrieved"), c("cited"), c("routing_ok")])
+        rows.append([kind, len(rs), c("correct"), c("verified"), c("exec_match"), c("retrieved"), c("cited"), c("routing_ok")])
     in_scope = [r for r in records if r["type"] != "oos"]
     oos = [r for r in records if r["type"] == "oos"]
-    rows.append(["**in-scope overall**", len(in_scope), pct(sum(r["correct"] for r in in_scope), len(in_scope)), "", "", "", "", ""])
+    blank = ["", "", "", ""]
+    rows.append(["**in-scope overall**", len(in_scope), pct(sum(r["correct"] for r in in_scope), len(in_scope)),
+                 pct(sum(bool(r.get("verified")) for r in in_scope), len(in_scope)), *blank])
     if oos:
-        rows.append(["**out-of-scope refused**", len(oos), pct(sum(r["correct"] for r in oos), len(oos)), "", "", "", "", ""])
-    false_ref = sum(1 for r in in_scope if r.get("refused"))
-    rows.append(["false refusals (in-scope)", len(in_scope), pct(false_ref, len(in_scope)), "", "", "", "", ""])
+        rows.append(["**out-of-scope refused**", len(oos), pct(sum(r["correct"] for r in oos), len(oos)), "", *blank])
+    rows.append(["false refusals (in-scope)", len(in_scope), pct(sum(1 for r in in_scope if r.get("refused")), len(in_scope)), "", *blank])
     return rows
 
 
@@ -286,16 +306,18 @@ def cmd_agent(args: argparse.Namespace) -> int:
                                 "error": f"{type(exc).__name__}: {exc}", "correct": False})
                 print(f"  [{mode}] {it['id']}: ERROR {type(exc).__name__}: {exc}")
                 continue
-            rec = score_item(it, final, ctx, gold.get(it["id"]))
+            rec = score_item(it, final, ctx, gold.get(it["id"]), judge=judge_fact)
             rec["seconds"] = round(time.time() - started, 1)
             records.append(rec)
             print(f"  [{mode}] {it['id']}: {'ok ' if rec['correct'] else 'MISS'} tools={rec.get('tools_used')} steps={rec.get('steps')}")
         all_records[mode] = records
         print(f"\n### mode = {mode}\n")
-        print(md_table(["type", "n", "correct", "SQL exec-match", "answer has value", "evidence retrieved", "evidence cited", "right tools"],
+        print(md_table(["type", "n", "correct answer", "verified (answer + sources)", "SQL exec-match", "evidence retrieved", "evidence cited", "right tools"],
                        _summarise(records)))
         print()
-    print("path:", save("agent", {"config": s.__dict__, "snapshot": runtime.snapshot, "records": all_records}))
+    # one file per run so experiments don't overwrite each other: --tag, else the modes ("agent_no_tools")
+    name = "agent_" + (args.tag or "-".join(all_records))
+    print("path:", save(name, {"config": s.__dict__, "snapshot": runtime.snapshot, "records": all_records}))
     return 0
 
 
@@ -311,7 +333,7 @@ def main() -> int:
     r = sub.add_parser("retrieval", help="Hit@k / MRR per chunking x retrieval mode")
     r.add_argument("--chunking", default="naive:800:150,section:1200")
     r.add_argument("--modes", default="bm25,dense,hybrid")
-    r.add_argument("--k", type=int, default=5)
+    r.add_argument("--ks", default="5,10,20", help="cut-offs; MRR and DocRecall use the first")
     r.add_argument("--ids", help="comma-separated question ids")
     r.set_defaults(fn=cmd_retrieval)
 
@@ -323,6 +345,7 @@ def main() -> int:
     a = sub.add_parser("agent", help="end-to-end run against the baselines")
     a.add_argument("--modes", default="agent,rag_only,no_tools")
     a.add_argument("--ids")
+    a.add_argument("--tag", help="name for the results file, e.g. baseline / hybrid_k10")
     a.set_defaults(fn=cmd_agent)
 
     args = ap.parse_args()

@@ -41,6 +41,15 @@ Rules:
    cybersecurity guidance or the KEV catalog, reply with exactly: {refusal} then one short sentence saying why.
 5. Reply in the language of the question. Be concise: a few sentences, or a short list."""
 
+# v2 = v1 + one general routing rule. It exists because the first real run sent a question about what a
+# directive REQUIRES to the SQL tool (it matched the words "known exploited vulnerabilities" to the table).
+# Kept as a separate version so the evaluation can report before/after instead of a guess.
+ROUTING_RULES_V2 = """
+6. Routing: the KEV table holds only per-vulnerability facts (vendor, product, dates, CWE ids, ransomware flag,
+   required-action text). Questions about what a policy, directive, standard or guide says or recommends,
+   and questions of definition or method, go to search_docs - even when they mention KEV or known exploited
+   vulnerabilities. Questions that count, list, rank or filter vulnerabilities go to query_kev."""
+
 SYSTEM_NO_TOOLS = (
     "You are a cybersecurity advisor. Answer the question briefly from your own knowledge. "
     "Reply in the language of the question."
@@ -62,10 +71,11 @@ def specs_for(mode: Mode) -> list[dict]:
     return []
 
 
-def build_system(mode: Mode, snapshot: str) -> str:
+def build_system(mode: Mode, snapshot: str, version: str = "v1") -> str:
     if mode == "no_tools":
         return SYSTEM_NO_TOOLS
-    return SYSTEM_AGENT.format(snapshot=snapshot, schema=SCHEMA_DOC, refusal=REFUSAL)
+    text = SYSTEM_AGENT.format(snapshot=snapshot, schema=SCHEMA_DOC, refusal=REFUSAL)
+    return text + ROUTING_RULES_V2 if version == "v2" else text
 
 
 def _assistant_message(msg: Any, calls: list[Any]) -> dict:
@@ -123,7 +133,7 @@ def run_agent(
     specs = specs_for(mode)
     ctx.enabled = frozenset(t["function"]["name"] for t in specs) & TOOL_NAMES
     messages: list[dict] = [
-        {"role": "system", "content": build_system(mode, snapshot)},
+        {"role": "system", "content": build_system(mode, snapshot, ctx.settings.prompt)},
         {"role": "user", "content": question},
     ]
     seen: set[tuple[str, str]] = set()

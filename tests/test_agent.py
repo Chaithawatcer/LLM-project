@@ -145,3 +145,10 @@ def test_modes_restrict_the_tools_the_model_is_offered(runtime):
     assert [t["function"]["name"] for t in seen["tools"]] == ["search_docs"]
     events(runtime, spy, mode="no_tools")
     assert seen["tools"] is None
+
+
+def test_prompt_v2_only_adds_a_routing_rule_and_never_to_the_bare_model():
+    from app.agent import build_system
+    v1, v2 = build_system("agent", "2026-10-20", "v1"), build_system("agent", "2026-10-20", "v2")
+    assert v2.startswith(v1) and "Routing:" in v2 and "Routing:" not in v1
+    assert build_system("no_tools", "x", "v2") == build_system("no_tools", "x", "v1")

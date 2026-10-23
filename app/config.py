@@ -1,9 +1,9 @@
 """Configuration, read from the environment (a local .env is loaded for convenience).
 
 Nothing secret lives in the repo: OPENAI_API_KEY and OPENAI_BASE_URL come from the
-environment, exactly like the course sandbox. The retrieval defaults below are the
-*baseline* the evaluation compares against; set CHUNKING / RETRIEVAL / MIN_SCORE in
-.env to the values `python -m eval.run_eval` recommends.
+environment, exactly like the course sandbox. The defaults below are the configuration the
+evaluation found best (README, "Results"). To reproduce the baseline it is compared with
+(the reference app's defaults), set CHUNKING=naive:800:150 RETRIEVAL=dense TOP_K=5 MIN_SCORE=0.40.
 """
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ class Settings:
     top_k: int
     min_score: float  # cosine floor below which we refuse instead of grounding on junk
     max_steps: int    # hard cap on the agent loop
+    prompt: str = "v1"  # system-prompt version (see app/agent.py): v1 = original, v2 = adds routing rules
 
 
 def get_settings() -> Settings:
@@ -40,8 +41,9 @@ def get_settings() -> Settings:
         chat_model=env("CHAT_MODEL", "gemma-4-E4B-it"),
         embed_model=env("EMBED_MODEL", "bge-m3"),
         chunking=env("CHUNKING", "naive:800:150"),
-        retrieval=env("RETRIEVAL", "dense"),
-        top_k=int(env("TOP_K", "5")),
-        min_score=float(env("MIN_SCORE", "0.40")),
+        retrieval=env("RETRIEVAL", "hybrid"),
+        top_k=int(env("TOP_K", "10")),
+        min_score=float(env("MIN_SCORE", "0.55")),
         max_steps=int(env("MAX_STEPS", "5")),
+        prompt=env("PROMPT", "v1"),
     )

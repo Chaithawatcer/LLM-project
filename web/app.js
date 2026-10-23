@@ -66,8 +66,8 @@ function showFinal(f) {
   const meta = $("meta");
   meta.replaceChildren();
   const flags = document.createElement("div");
-  flags.append(f.grounded ? tag("ok", "grounded in tool results") : tag("warn", "no tool result was read - treat with caution"));
-  if (f.refused) flags.append(tag("warn", "declined"));
+  if (f.refused) flags.append(tag("warn", "declined: the sources can't answer this"));
+  else flags.append(f.grounded ? tag("ok", "grounded in tool results") : tag("warn", "no tool result was read - treat with caution"));
   if (f.stopped === "max_steps") flags.append(tag("warn", "hit the step limit"));
   if (f.invalid_citations.length) flags.append(tag("bad", "invalid citation " + f.invalid_citations.map((n) => `[${n}]`).join(" ")));
   meta.append(flags);

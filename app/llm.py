@@ -28,7 +28,7 @@ def client() -> OpenAI:
                 "OPENAI_API_KEY is not set. Put your course key in .env (see .env.example)."
             )
         os.environ.setdefault("OPENAI_BASE_URL", DEFAULT_BASE_URL)
-        _client = OpenAI(timeout=60.0)
+        _client = OpenAI(timeout=60.0, max_retries=6)  # the class proxy is shared: ride out 429s with backoff
     return _client
 
 

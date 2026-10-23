@@ -67,23 +67,51 @@ SQL_ITEM = {"id": "s", "type": "sql", "question": "q", "gold_sql": "", "answer_c
 DOC_ITEM = {"id": "d", "type": "doc", "question": "q", "evidence": ["emergency patching"], "expect_tools": ["search_docs"]}
 
 
-def test_sql_item_needs_both_the_right_result_and_the_right_answer():
+YES, NO = (lambda q, a, f: True), (lambda q, a, f: False)
+
+
+def test_sql_item_is_judged_on_the_answer_and_verified_by_the_query():
     ctx = _ctx(sql_log=[{"ok": True, "rows": [(390,)]}])
     good = run_eval.score_item(SQL_ITEM, _final(answer="390", tools_used=["query_kev"]), ctx, [(390,)])
-    assert good["correct"] and good["exec_match"] and good["routing_ok"]
+    assert good["correct"] and good["verified"] and good["exec_match"] and good["routing_ok"]
     wrong_answer = run_eval.score_item(SQL_ITEM, _final(answer="about 400", tools_used=["query_kev"]), ctx, [(390,)])
     assert not wrong_answer["correct"] and wrong_answer["exec_match"]            # right query, wrong words
-    lucky_guess = run_eval.score_item(SQL_ITEM, _final(answer="390", tools_used=[]), _ctx(), [(390,)])
-    assert not lucky_guess["correct"]                                            # right number, but never ran SQL
+    lucky = run_eval.score_item(SQL_ITEM, _final(answer="390", tools_used=[]), _ctx(), [(390,)])
+    assert lucky["correct"] and not lucky["verified"]                            # right number, but never ran SQL: not backed
 
 
-def test_doc_item_requires_evidence_to_have_reached_the_model():
+def test_the_bare_model_is_graded_on_the_same_scale_as_the_agent():
+    """A baseline that can score zero by construction proves nothing; it must be able to be right or wrong."""
+    guess = run_eval.score_item(SQL_ITEM, _final(answer="Roughly 390.", tools_used=[], grounded=False), _ctx(), [(390,)])
+    assert guess["correct"] and not guess["verified"]
+    miss = run_eval.score_item(SQL_ITEM, _final(answer="Roughly 800.", tools_used=[], grounded=False), _ctx(), [(390,)])
+    assert not miss["correct"]
+
+
+def test_doc_item_correctness_comes_from_the_judge_and_verification_from_retrieval():
     hit = _ctx(sources={"k": {"n": 1, "text": "Plan for EMERGENCY  patching quickly"}})
-    assert run_eval.score_item(DOC_ITEM, _final(answer="x", tools_used=["search_docs"]), hit, None)["correct"]
-    miss = _ctx(sources={"k": {"n": 1, "text": "unrelated text"}})
-    assert not run_eval.score_item(DOC_ITEM, _final(answer="x", tools_used=["search_docs"]), miss, None)["correct"]
-    refused = run_eval.score_item(DOC_ITEM, _final(answer="no", refused=True, tools_used=["search_docs"]), hit, None)
+    final = _final(answer="Patch fast.", tools_used=["search_docs"])
+    ok = run_eval.score_item(DOC_ITEM, final, hit, None, judge=YES)
+    assert ok["correct"] and ok["verified"] and ok["retrieved"]
+    wrong = run_eval.score_item(DOC_ITEM, final, hit, None, judge=NO)
+    assert not wrong["correct"] and wrong["retrieved"]                           # evidence reached the model, answer still wrong
+    memory = run_eval.score_item(DOC_ITEM, _final(answer="Patch fast.", tools_used=[]), _ctx(), None, judge=YES)
+    assert memory["correct"] and not memory["verified"]                          # right from memory: correct, not backed
+    refused = run_eval.score_item(DOC_ITEM, _final(answer="no", refused=True, tools_used=["search_docs"]), hit, None, judge=YES)
     assert not refused["correct"]                                                # refusing an answerable question is a miss
+
+
+def test_judge_is_never_called_for_a_refusal():
+    def boom(*a):
+        raise AssertionError("judge called")
+    r = run_eval.score_item(DOC_ITEM, _final(answer="I can't answer that.", refused=True), _ctx(), None, judge=boom)
+    assert not r["correct"]
+
+
+def test_judge_parses_yes_no_defensively():
+    from eval.judge import judge_fact
+    ask = lambda reply: judge_fact("q", "a", "f", chat_fn=lambda *args, **kw: SimpleNamespace(content=reply))
+    assert ask("YES") and ask(" yes, it does") and not ask("NO") and not ask("Maybe") and not ask("") and not ask(None)
 
 
 def test_out_of_scope_item_is_correct_only_when_refused():
