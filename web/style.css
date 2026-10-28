@@ -1,12 +1,14 @@
-/* Cyber Advisor UI. Teal = the document path, purple = the table path (same as the architecture diagram). */
+/* Cyber Advisor UI. Blue = the interface itself (buttons, focus, links). Teal = the document path and purple = the
+   table path, the same two colours as the architecture diagram, so those never change with the brand colour. */
 :root {
   color-scheme: light;
   --bg: #f4f7f9; --surface: #ffffff; --surface-2: #eef3f6; --border: #d5dde4; --border-strong: #b4c0cb;
   --text: #1b2631; --muted: #566473;
-  --brand: #0f6e56; --brand-soft: #e1f5ee; --brand-ink: #085041;
+  --brand: #2563eb; --brand-soft: #e8efff; --brand-ink: #1e40af;
+  --docs: #0f6e56; --docs-soft: #e1f5ee; --docs-ink: #085041;
   --sql: #534ab7; --sql-soft: #eeedfe; --sql-ink: #3c3489;
   --ok: #1a7f4b; --ok-soft: #e4f4ea; --warn: #8a5300; --warn-soft: #fdf1dc; --bad: #b3261e; --bad-soft: #fdeceb;
-  --btn-bg: #0f6e56; --btn-fg: #ffffff; --ring: rgba(15, 110, 86, .38);
+  --btn-bg: #2563eb; --btn-fg: #ffffff; --ring: rgba(37, 99, 235, .35);
   --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 6px 20px rgba(16, 24, 40, .05);
   --radius: 14px;
   --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
@@ -16,11 +18,12 @@
     color-scheme: dark;
     --bg: #0a1016; --surface: #121a22; --surface-2: #19232d; --border: #27323e; --border-strong: #3a4857;
     --text: #e5ecf2; --muted: #9aa8b6;
-    --brand: #3fd8b1; --brand-soft: rgba(63, 216, 177, .13); --brand-ink: #7ce8cb;
+    --brand: #7aa9ff; --brand-soft: rgba(122, 169, 255, .14); --brand-ink: #a9c6ff;
+    --docs: #3fd8b1; --docs-soft: rgba(63, 216, 177, .13); --docs-ink: #7ce8cb;
     --sql: #a79fff; --sql-soft: rgba(167, 159, 255, .15); --sql-ink: #c7c2ff;
     --ok: #5fd68a; --ok-soft: rgba(95, 214, 138, .13); --warn: #f2b53a; --warn-soft: rgba(242, 181, 58, .13);
     --bad: #ff8179; --bad-soft: rgba(255, 129, 121, .13);
-    --btn-bg: #3fd8b1; --btn-fg: #04241c; --ring: rgba(63, 216, 177, .45);
+    --btn-bg: #7aa9ff; --btn-fg: #07152f; --ring: rgba(122, 169, 255, .45);
     --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .25);
   }
 }
@@ -28,11 +31,12 @@
   color-scheme: dark;
   --bg: #0a1016; --surface: #121a22; --surface-2: #19232d; --border: #27323e; --border-strong: #3a4857;
   --text: #e5ecf2; --muted: #9aa8b6;
-  --brand: #3fd8b1; --brand-soft: rgba(63, 216, 177, .13); --brand-ink: #7ce8cb;
+  --brand: #7aa9ff; --brand-soft: rgba(122, 169, 255, .14); --brand-ink: #a9c6ff;
+    --docs: #3fd8b1; --docs-soft: rgba(63, 216, 177, .13); --docs-ink: #7ce8cb;
   --sql: #a79fff; --sql-soft: rgba(167, 159, 255, .15); --sql-ink: #c7c2ff;
   --ok: #5fd68a; --ok-soft: rgba(95, 214, 138, .13); --warn: #f2b53a; --warn-soft: rgba(242, 181, 58, .13);
   --bad: #ff8179; --bad-soft: rgba(255, 129, 121, .13);
-  --btn-bg: #3fd8b1; --btn-fg: #04241c; --ring: rgba(63, 216, 177, .45);
+  --btn-bg: #7aa9ff; --btn-fg: #07152f; --ring: rgba(122, 169, 255, .45);
   --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .25);
 }
 
@@ -109,7 +113,7 @@ textarea::placeholder { color: var(--muted); opacity: .8; }
 .chip:hover { border-color: var(--border-strong); background: var(--surface-2); }
 .chip .dot { width: 7px; height: 7px; }
 .chip[data-kind="sql"] .dot { background: var(--sql); }
-.chip[data-kind="docs"] .dot { background: var(--brand); }
+.chip[data-kind="docs"] .dot { background: var(--docs); }
 .chip[data-kind="decline"] .dot { background: var(--warn); }
 .chip[data-kind="weak"] .dot { background: var(--bad); }
 .chip small { color: var(--muted); font-size: .72rem; }
@@ -135,8 +139,8 @@ textarea::placeholder { color: var(--muted); opacity: .8; }
 .badge-bad { color: var(--bad); background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
 .badge-info { color: var(--muted); background: var(--surface-2); border-color: var(--border); }
 
-.cite { display: inline-grid; place-items: center; min-width: 1.45em; height: 1.45em; padding: 0 .35em; margin: 0 .12em; border-radius: 6px; font: 650 .72em/1 var(--mono); text-decoration: none; vertical-align: .12em; background: var(--brand-soft); color: var(--brand-ink); border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent); }
-a.cite:hover { background: color-mix(in srgb, var(--brand) 22%, transparent); }
+.cite { display: inline-grid; place-items: center; min-width: 1.45em; height: 1.45em; padding: 0 .35em; margin: 0 .12em; border-radius: 6px; font: 650 .72em/1 var(--mono); text-decoration: none; vertical-align: .12em; background: var(--docs-soft); color: var(--docs-ink); border: 1px solid color-mix(in srgb, var(--docs) 30%, transparent); }
+a.cite:hover { background: color-mix(in srgb, var(--docs) 22%, transparent); }
 .cite-bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
 .cite-loose { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
 
@@ -145,7 +149,7 @@ a.cite:hover { background: color-mix(in srgb, var(--brand) 22%, transparent); }
 .note { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; font-size: .78rem; }
 .sources { display: grid; gap: 8px; }
 .source { display: flex; align-items: baseline; gap: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; scroll-margin-top: 90px; transition: background .3s, border-color .3s; }
-.source.flash { background: var(--brand-soft); border-color: var(--brand); }
+.source.flash { background: var(--docs-soft); border-color: var(--docs); }
 .source .cite { flex: none; margin: 0; }
 .source-title { font-weight: 600; font-size: .94rem; }
 .source-meta { color: var(--muted); font-size: .84rem; margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -168,11 +172,11 @@ a.cite:hover { background: color-mix(in srgb, var(--brand) 22%, transparent); }
 .step::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 0; width: 2px; background: var(--border); }
 .step:last-child::before { display: none; }
 .node { position: absolute; left: 0; top: 3px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); background: var(--surface); }
-.step[data-tool="search_docs"] .node { border-color: var(--brand); background: var(--brand-soft); }
+.step[data-tool="search_docs"] .node { border-color: var(--docs); background: var(--docs-soft); }
 .step[data-tool="query_kev"] .node { border-color: var(--sql); background: var(--sql-soft); }
 .step-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .88rem; }
 .tool { font: 600 .78rem/1 var(--mono); border-radius: 6px; padding: 4px 8px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-.step[data-tool="search_docs"] .tool { background: var(--brand-soft); color: var(--brand-ink); border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
+.step[data-tool="search_docs"] .tool { background: var(--docs-soft); color: var(--docs-ink); border-color: color-mix(in srgb, var(--docs) 30%, transparent); }
 .step[data-tool="query_kev"] .tool { background: var(--sql-soft); color: var(--sql-ink); border-color: color-mix(in srgb, var(--sql) 30%, transparent); }
 .step-n { color: var(--muted); font-size: .74rem; }
 .arg { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); font: .8rem/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
