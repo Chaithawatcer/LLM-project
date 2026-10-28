@@ -3,72 +3,96 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Cyber Advisor answers security questions from NIST guidance and the CISA KEV catalog, with citations and exact SQL.">
   <title>Cyber Advisor</title>
-  <style>
-    :root { --bg:#fff; --fg:#1b2330; --muted:#5b6678; --card:#f4f6fa; --line:#d9dfe9; --accent:#2f5bea;
-            --ok:#1a7f4b; --warn:#a15c00; --bad:#b3261e; --act:#2f5bea; }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg:#0f1319; --fg:#e6e9ef; --muted:#97a2b3; --card:#171d27; --line:#2a3342; --accent:#7c9bff;
-              --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --act:#7c9bff; } }
-    * { box-sizing: border-box; }
-    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
-    main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
-    h1 { font-size: 1.45rem; margin: 0 0 4px; }
-    .sub, .muted { color: var(--muted); }
-    .sub { margin: 0 0 18px; }
-    label { display:block; font-size:.85rem; color:var(--muted); margin: 14px 0 4px; }
-    textarea, select { width:100%; background:var(--card); color:var(--fg); border:1px solid var(--line);
-                       border-radius:8px; padding:10px 12px; font:inherit; }
-    textarea { min-height: 84px; resize: vertical; }
-    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
-    .row > div { flex:1 1 220px; }
-    button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 18px; font:inherit; cursor:pointer; }
-    button:disabled { opacity:.55; cursor:default; }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .chip { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:.82rem; }
-    .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:18px; overflow:hidden; }
-    .panel h2 { font-size:.8rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin:0; padding:10px 14px; border-bottom:1px solid var(--line); }
-    .step { padding:8px 14px; border-bottom:1px solid var(--line); font-size:.85rem; word-break:break-word; }
-    .step:last-child { border-bottom:0; }
-    .step b.act { color:var(--act); } .step b.obs { color:var(--ok); }
-    code, pre { font-family: ui-monospace, Consolas, monospace; font-size:.82rem; }
-    pre { margin:6px 0 0; white-space:pre-wrap; word-break:break-word; color:var(--muted); }
-    .answer { padding:14px; white-space:pre-wrap; }
-    .meta { padding:0 14px 14px; font-size:.85rem; }
-    .meta ul { margin:4px 0 10px; padding-left:20px; }
-    .tag { display:inline-block; border:1px solid currentColor; border-radius:6px; padding:0 8px; font-size:.78rem; margin-right:6px; }
-    .tag.ok { color:var(--ok); } .tag.warn { color:var(--warn); } .tag.bad { color:var(--bad); }
-    .err { color:var(--bad); margin-top:14px; }
-  </style>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // apply the saved theme before first paint, so a dark-mode visitor never sees a white flash
+    try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
 </head>
 <body>
+<a class="skip" href="#q">Skip to the question box</a>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/" aria-label="Cyber Advisor, home">
+      <svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path d="M12 2.5 4.5 5.4v5.6c0 4.5 3.1 8.3 7.5 9.9 4.4-1.6 7.5-5.4 7.5-9.9V5.4L12 2.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="m8.6 12.2 2.4 2.4 4.4-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Cyber Advisor</span>
+    </a>
+    <div class="pills" id="status" aria-live="polite"><span class="pill"><span class="dot dot-idle"></span>Checking server…</span></div>
+    <button id="theme" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme"></button>
+  </div>
+</header>
+
 <main>
-  <h1>Cyber Advisor</h1>
-  <p class="sub">Ask about the CISA Known Exploited Vulnerabilities catalog (counts, vendors, dates, ransomware use)
-    or about NIST security guidance (incident response, patching, risk, logging, zero trust). Answers cite their sources.</p>
-  <p class="muted" id="health">checking server…</p>
+  <section class="hero">
+    <p class="eyebrow">Security Q&amp;A with receipts</p>
+    <h1>Ask about exploited vulnerabilities and security guidance</h1>
+    <p class="lede">Counts, vendors and dates come from CISA's Known Exploited Vulnerabilities catalog, computed exactly with SQL.
+      Recommendations come from 12 NIST publications and cite the page they came from.</p>
+  </section>
 
-  <label for="q">Question</label>
-  <textarea id="q" maxlength="1000" placeholder="e.g. How many Microsoft vulnerabilities were added to KEV in 2025?"></textarea>
-  <div class="chips" id="examples"></div>
+  <form id="composer" class="card composer" autocomplete="off">
+    <label for="q" class="sr-only">Your question</label>
+    <textarea id="q" maxlength="1000" rows="3" placeholder="e.g. How many Microsoft vulnerabilities were added to KEV in 2025?"></textarea>
 
-  <div class="row">
-    <div>
-      <label for="mode">Mode (the baselines from the evaluation)</label>
-      <select id="mode">
-        <option value="agent">agent: documents + KEV table</option>
-        <option value="rag_only">documents only (no SQL)</option>
-        <option value="no_tools">no tools (bare model)</option>
-      </select>
+    <div class="composer-foot">
+      <fieldset class="modes">
+        <legend class="sr-only">How should the assistant answer?</legend>
+        <label class="mode"><input type="radio" name="mode" value="agent" checked>
+          <span class="mode-body"><b>Agent</b><small>documents + KEV table</small></span></label>
+        <label class="mode"><input type="radio" name="mode" value="rag_only">
+          <span class="mode-body"><b>Documents only</b><small>no SQL (baseline)</small></span></label>
+        <label class="mode"><input type="radio" name="mode" value="no_tools">
+          <span class="mode-body"><b>No tools</b><small>bare model (baseline)</small></span></label>
+      </fieldset>
+
+      <div class="actions">
+        <span class="count" id="count">0 / 1000</span>
+        <button id="ask" class="primary" type="submit"><span class="btn-label">Ask</span><kbd class="hint">Ctrl&nbsp;+&nbsp;Enter</kbd></button>
+      </div>
     </div>
-    <div style="flex:0 0 auto"><button id="ask">Ask</button></div>
+  </form>
+
+  <div class="examples" aria-label="Example questions">
+    <span class="examples-label">Try</span>
+    <div class="chips" id="examples"></div>
   </div>
 
-  <p class="err" id="error" hidden></p>
-  <section class="panel" id="trace-panel" hidden><h2>What the agent did</h2><div id="trace"></div></section>
-  <section class="panel" id="answer-panel" hidden><h2>Answer</h2><div class="answer" id="answer"></div><div class="meta" id="meta"></div></section>
-  <p class="muted" style="margin-top:32px;font-size:.82rem">Demo project. Questions are sent to a course LLM proxy; answers can be wrong, so check the cited sources. Fair-use limits apply.</p>
+  <div class="banner banner-bad" id="error" role="alert" hidden></div>
+
+  <div class="results" id="results" hidden>
+    <article class="card answer-card" id="answer-card" aria-live="polite" aria-busy="false">
+      <header class="card-head"><h2>Answer</h2><div class="badges" id="badges"></div></header>
+      <div class="answer" id="answer"></div>
+      <section id="sources-wrap" class="subsection" hidden>
+        <h3>Sources <span class="note">recorded by the server when it retrieved them</span></h3>
+        <div class="sources" id="sources"></div>
+      </section>
+      <section id="sql-wrap" class="subsection" hidden>
+        <h3>SQL that ran</h3>
+        <div id="sql"></div>
+      </section>
+    </article>
+
+    <aside class="card activity" aria-label="What the agent did">
+      <header class="card-head"><h2>Agent activity</h2><span class="state" id="activity-state"></span></header>
+      <ol class="timeline" id="trace"></ol>
+      <p class="empty" id="trace-empty" hidden>No tools were called: the model answered directly.</p>
+    </aside>
+  </div>
 </main>
+
+<footer class="foot">
+  <p>Demo project for the KMITL <i>Building LLM-Powered Applications</i> course. Questions are sent to a course LLM proxy and answers can be wrong, so check the cited sources. Fair-use limits apply.
+    <a href="https://github.com/Chaithawatcer/LLM-project" target="_blank" rel="noopener">Source on GitHub</a></p>
+</footer>
+
 <script src="app.js"></script>
 </body>
 </html>
